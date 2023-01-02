@@ -24,6 +24,7 @@ class ChipsInput<T extends Object> extends StatefulWidget {
     required this.findSuggestions,
     this.optionsViewBuilder,
     this.maxChips,
+    this.onceSuggestionPerItem = true,
     this.initialValue = const [],
     this.controller,
     this.maxLengthEnforcement,
@@ -129,6 +130,9 @@ class ChipsInput<T extends Object> extends StatefulWidget {
 
   /// The maximum number of chips
   final int? maxChips;
+
+  /// suggestion will not show if already selected
+  final bool onceSuggestionPerItem;
 
   /// Controls the text being edited.
   ///
@@ -626,10 +630,15 @@ class ChipsInputState<T extends Object> extends State<ChipsInput<T>>
           if (textEditingValue.text.length < _chips.length) {
             _deleteLastChips(textEditingValue.text.length);
           }
-          final options = await widget.findSuggestions(textEditingValue.text.replaceAll("$space", ""));
-          final notUsedOptions =
-              options.where((r) => !_chips.contains(r)).toList(growable: false);
-          return notUsedOptions;
+          final options = await widget
+              .findSuggestions(textEditingValue.text.replaceAll("$space", ""));
+          if (widget.onceSuggestionPerItem) {
+            final notUsedOptions = options
+                .where((r) => !_chips.contains(r))
+                .toList(growable: false);
+            return notUsedOptions;
+          }
+          return options;
         },
         onSelected: (T option) {
           _addChip(option);
