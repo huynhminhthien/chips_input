@@ -605,12 +605,16 @@ class ChipsInputState<T extends Object> extends State<ChipsInput<T>>
     final theme = Theme.of(context);
     final TextStyle style =
         theme.textTheme.subtitle1!.copyWith(height: 1.5).merge(widget.style);
-    Widget _defaultOptionsViewBuilder(BuildContext context,
-        AutocompleteOnSelected<T> onSelected, Iterable<T> options) {
+    Widget _defaultOptionsViewBuilder(
+        BuildContext context,
+        AutocompleteOnSelected<T> onSelected,
+        Iterable<T> options,
+        BoxConstraints constraints) {
       return _DefaultOptionsViewBuilder(
         onSelected: onSelected,
         options: options,
         suggestionBuilder: widget.suggestionBuilder!,
+        constraints: constraints,
       );
     }
 
@@ -623,7 +627,9 @@ class ChipsInputState<T extends Object> extends State<ChipsInput<T>>
         widget.maxChips! <= _chips.length &&
         _chips.length > 0);
 
-    return RawAutocomplete<T>(
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) =>
+          RawAutocomplete<T>(
         focusNode: focusNode,
         textEditingController: controller,
         optionsBuilder: (TextEditingValue textEditingValue) async {
@@ -728,9 +734,17 @@ class ChipsInputState<T extends Object> extends State<ChipsInput<T>>
             ),
           );
         },
-        optionsViewBuilder: maxReached
-            ? _emptyOptionsViewBuilder
-            : widget.optionsViewBuilder ?? _defaultOptionsViewBuilder);
+        optionsViewBuilder: (context, onSelected, options) {
+          if (maxReached) {
+            return _emptyOptionsViewBuilder(context, onSelected, options);
+          } else if (widget.optionsViewBuilder != null) {
+            return widget.optionsViewBuilder!(context, onSelected, options);
+          }
+          return _defaultOptionsViewBuilder(
+              context, onSelected, options, constraints);
+        },
+      ),
+    );
   }
 }
 
@@ -741,6 +755,7 @@ class _DefaultOptionsViewBuilder<T extends Object> extends StatelessWidget {
     required this.onSelected,
     required this.options,
     required this.suggestionBuilder,
+    required this.constraints,
   }) : super(key: key);
 
   final AutocompleteOnSelected<T> onSelected;
@@ -748,6 +763,7 @@ class _DefaultOptionsViewBuilder<T extends Object> extends StatelessWidget {
   final Iterable<T> options;
 
   final SuggestionBuilder<T> suggestionBuilder;
+  final BoxConstraints constraints;
 
   @override
   Widget build(BuildContext context) {
@@ -757,6 +773,7 @@ class _DefaultOptionsViewBuilder<T extends Object> extends StatelessWidget {
         elevation: 4.0,
         child: Container(
           height: 200.0,
+          width: constraints.biggest.width,
           child: ListView.builder(
             padding: EdgeInsets.all(8.0),
             itemCount: options.length,
